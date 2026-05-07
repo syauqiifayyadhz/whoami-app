@@ -1,4 +1,4 @@
-name: CI - Build & Push Docker Image
+name: CI-CD - Build Push Deploy
 
 on:
   push:
@@ -6,35 +6,41 @@ on:
       - main
 
 jobs:
-  build:
+  build-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. ambil source code dari repo
+      # 1. Checkout code
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 2. login ke Docker Hub
+      # 2. Login Docker Hub
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # 3. build image
+      # 3. Build Docker image
       - name: Build Docker image
         run: docker build -t syauqiifayyadhz/whoami-app:v2 .
 
-      # 4. push image ke Docker Hub
+      # 4. Push Docker image
       - name: Push Docker image
         run: docker push syauqiifayyadhz/whoami-app:v2
 
+      # 5. Setup kubeconfig
       - name: Setup kubeconfig
         run: |
           echo "${{ secrets.KUBE_CONFIG }}" > kubeconfig.yaml
-          export KUBECONFIG=$PWD/kubeconfig.yaml
 
+      # 6. Deploy ke Kubernetes
       - name: Deploy to Kubernetes
         run: |
-          kubectl set image deployment/whoami-app \
+          KUBECONFIG=$PWD/kubeconfig.yaml kubectl set image deployment/whoami-app \
           whoami-app=syauqiifayyadhz/whoami-app:v2 -n apps
+
+      # 7. Verifikasi rollout
+      - name: Verify rollout
+        run: |
+          KUBECONFIG=$PWD/kubeconfig.yaml kubectl rollout status deployment/whoami-app -n apps
