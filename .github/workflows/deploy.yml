@@ -28,3 +28,13 @@ jobs:
       # 4. push image ke Docker Hub
       - name: Push Docker image
         run: docker push syauqiifayyadhz/whoami-app:v2
+
+      - name: Setup kubeconfig
+        run: |
+          echo "${{ secrets.KUBE_CONFIG }}" > kubeconfig.yaml
+          export KUBECONFIG=$PWD/kubeconfig.yaml
+
+      - name: Deploy to Kubernetes
+        run: |
+          kubectl set image deployment/whoami-app \
+          whoami-app=syauqiifayyadhz/whoami-app:v2 -n apps
